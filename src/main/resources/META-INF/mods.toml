@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[31,)"
+
+[[mods]]
+modId="ezinventory"
+version="0.1.0"
+displayName="Easy Inventory"
+issueTrackerURL=""
+displayURL=""
+logoFile=""
+credits=""
+authors="AreUThreateningMe"
+description='''
+Inventory Management
+'''
+[[dependencies.ezinventory]]
+    modId="forge"
+    mandatory=true
+    versionRange="[31,)"
+    ordering="AFTER"
+    side="BOTH"
+
+[[dependencies.ezinventory]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.15.2]"
+    ordering="AFTER"
+    side="BOTH"
