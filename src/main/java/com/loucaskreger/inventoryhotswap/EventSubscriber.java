@@ -1,9 +1,9 @@
-package com.loucaskreger.ezinventory;
+package com.loucaskreger.inventoryhotswap;
 
 import static org.lwjgl.glfw.GLFW.GLFW_KEY_LEFT_ALT;
 
-import com.loucaskreger.ezinventory.config.ClientConfig;
-import com.loucaskreger.ezinventory.config.Config;
+import com.loucaskreger.inventoryhotswap.config.ClientConfig;
+import com.loucaskreger.inventoryhotswap.config.Config;
 import com.mojang.blaze3d.matrix.MatrixStack;
 import com.mojang.blaze3d.systems.RenderSystem;
 
@@ -34,11 +34,11 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import net.minecraftforge.fml.config.ModConfig;
 
-@Mod.EventBusSubscriber(modid = EZInventory.MOD_ID, value = Dist.CLIENT)
+@Mod.EventBusSubscriber(modid = InventoryHotswap.MOD_ID, value = Dist.CLIENT)
 public class EventSubscriber {
 
-	public static final KeyBinding vertScroll = new KeyBinding(EZInventory.MOD_ID + ".key.verticalscroll",
-			GLFW_KEY_LEFT_ALT, EZInventory.MOD_ID + ".key.categories");
+	public static final KeyBinding vertScroll = new KeyBinding(InventoryHotswap.MOD_ID + ".key.verticalscroll",
+			GLFW_KEY_LEFT_ALT, InventoryHotswap.MOD_ID + ".key.categories");
 
 	private static final int[] slotsScrollDown = { 0, 9, 18, 27 };
 	private static final int[] slotsScrollUp = { 0, 27, 18, 9 };
@@ -48,7 +48,7 @@ public class EventSubscriber {
 	private static final int WIDTH = 22;
 	private static final int HEIGHT = 61;
 
-	private static final ResourceLocation TEXTURE = new ResourceLocation(EZInventory.MOD_ID,
+	private static final ResourceLocation TEXTURE = new ResourceLocation(InventoryHotswap.MOD_ID,
 			"textures/gui/verticalbar.png");
 
 	private static ResourceLocation WIDGETS_TEXTURE_PATH;
@@ -103,6 +103,7 @@ public class EventSubscriber {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	@SubscribeEvent
 	public static void onGUIRender(final RenderGameOverlayEvent.Post event) {
 
@@ -205,6 +206,7 @@ public class EventSubscriber {
 	 * @param itemRenderer
 	 * @param fontRenderer
 	 */
+	@SuppressWarnings("deprecation")
 	private static void renderHotbarItem(int x, int y, float partialTicks, PlayerEntity player, ItemStack stack,
 			ItemRenderer itemRenderer, FontRenderer fontRenderer) {
 		if (!stack.isEmpty()) {
@@ -255,6 +257,7 @@ public class EventSubscriber {
 		}
 	}
 
+	@SuppressWarnings("deprecation")
 	private static void renderSelectedItem(ItemStack stack, Minecraft mc, int scaledWidth, int scaledHeight,
 			FontRenderer fontRenderer) {
 		mc.getProfiler().startSection("selectedItemName");
@@ -268,7 +271,7 @@ public class EventSubscriber {
 			ITextComponent highlightTip = highlightingItemStack.getHighlightTip(iformattabletextcomponent);
 			int i = fontRenderer.getStringPropertyWidth(highlightTip);
 			int j = (scaledWidth - i) / 2;
-			int k =  mc.playerController.gameIsSurvivalOrAdventure() ? scaledHeight - HEIGHT - 31 - textOffset
+			int k = mc.playerController.gameIsSurvivalOrAdventure() ? scaledHeight - HEIGHT - 31 - textOffset
 					: scaledHeight - HEIGHT - 46;
 			if (!mc.playerController.shouldDrawHUD()) {
 				k += 14;
@@ -327,9 +330,9 @@ public class EventSubscriber {
 		if (vertScroll.isKeyDown() && mc.currentScreen == null) {
 			ForgeIngameGui.renderHotbar = false;
 			// determines whether of not user wants survival gui parts rendered
-			isGuiInvisible = ClientConfig.guiRenderType.get() == EZInventory.GuiRenderType.INVISIBLE
+			isGuiInvisible = ClientConfig.guiRenderType.get() == InventoryHotswap.GuiRenderType.INVISIBLE
 					&& pc.gameIsSurvivalOrAdventure();
-			isGuiPushed = ClientConfig.guiRenderType.get() == EZInventory.GuiRenderType.PUSHED
+			isGuiPushed = ClientConfig.guiRenderType.get() == InventoryHotswap.GuiRenderType.PUSHED
 					&& pc.gameIsSurvivalOrAdventure();
 			wasKeyDown = true;
 		} else if (wasKeyDown) {
