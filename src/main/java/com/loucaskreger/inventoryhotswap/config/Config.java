@@ -1,8 +1,8 @@
-package com.loucaskreger.ezinventory.config;
+package com.loucaskreger.inventoryhotswap.config;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import com.loucaskreger.ezinventory.EZInventory;
+import com.loucaskreger.inventoryhotswap.InventoryHotswap;
 
 import net.minecraftforge.common.ForgeConfigSpec;
 
@@ -11,7 +11,7 @@ public class Config {
 	public static final ClientConfig CLIENT;
 	public static final ForgeConfigSpec CLIENT_SPEC;
 
-	public static EZInventory.GuiRenderType guiRenderType;
+	public static InventoryHotswap.GuiRenderType guiRenderType;
 
 	static {
 		final Pair<ClientConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(ClientConfig::new);

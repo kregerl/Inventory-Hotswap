@@ -2,25 +2,25 @@ modLoader="javafml"
 loaderVersion="[31,)"
 
 [[mods]]
-modId="ezinventory"
-version="0.1.0"
-displayName="Easy Inventory"
-issueTrackerURL=""
-displayURL=""
-logoFile=""
+modId="inventoryhotswap"
+version="1.0"
+displayName="Inventory Hotswap"
+issueTrackerURL="https://github.com/kregerl/hotswap/issues"
+displayURL="https://www.curseforge.com/minecraft/mc-mods/inventory-hotswap"
+logoFile="inventoryHotswapLogo.png"
 credits=""
 authors="AreUThreateningMe"
 description='''
-Inventory Management
+Quickly switch between items in your inventory.
 '''
-[[dependencies.ezinventory]]
+[[dependencies.inventoryhotswap]]
     modId="forge"
     mandatory=true
     versionRange="[31,)"
     ordering="AFTER"
     side="BOTH"
 
-[[dependencies.ezinventory]]
+[[dependencies.inventoryhotswap]]
     modId="minecraft"
     mandatory=true
     versionRange="[1.15.2]"
