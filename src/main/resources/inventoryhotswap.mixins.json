@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "com.loucaskreger.inventoryhotswap.mixin",
+	"compatibilityLevel": "JAVA_8",
+	"mixins": [
+	],
+	"client": [
+		"MouseInputMixin",
+		"HideHudMixin",
+		"MoveHudMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
