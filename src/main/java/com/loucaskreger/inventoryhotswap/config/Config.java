@@ -12,6 +12,7 @@ public class Config {
 	public static final ForgeConfigSpec CLIENT_SPEC;
 
 	public static InventoryHotswap.GuiRenderType guiRenderType;
+	public static boolean inverted;
 
 	static {
 		final Pair<ClientConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(ClientConfig::new);
@@ -21,5 +22,6 @@ public class Config {
 
 	public static void bakeConfig() {
 		guiRenderType = ClientConfig.guiRenderType.get();
+		inverted = ClientConfig.inverted.get();
 	}
 }
