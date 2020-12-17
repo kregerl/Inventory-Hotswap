@@ -1,5 +1,6 @@
 package com.loucaskreger.inventoryhotswap;
 
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
 import net.minecraftforge.fml.common.Mod;
@@ -23,6 +24,10 @@ public class InventoryHotswap {
 		FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
 
 		ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.CLIENT_SPEC);
+		// Use a sided proxy instead of this
+		// {https://forums.minecraftforge.net/topic/63802-how-to-add-compatibility-with-other-mods/}
+		if (ModList.get().isLoaded("armorhotswap"))
+			LOGGER.debug("Armor Hotswap is loaded alongside inventoryHotswap");
 	}
 
 	private void commonSetup(final FMLCommonSetupEvent event) {
