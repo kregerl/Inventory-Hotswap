@@ -5,7 +5,6 @@ import org.lwjgl.glfw.GLFW;
 import com.loucaskreger.inventoryhotswap.config.Config;
 import com.loucaskreger.inventoryhotswap.config.HudTypes;
 import com.mojang.blaze3d.systems.RenderSystem;
-
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -40,30 +39,35 @@ public class InventoryHotswap implements ModInitializer {
 
 	private static final int[] slotsScrollDown = { 0, 9, 18, 27 };
 	private static final int[] slotsScrollUp = { 0, 27, 18, 9 };
-	private static final int[] selectedScrollPositions = { 60, 39, 19, -1 };
+	private static final int[] selectedScrollPositions = { 65, 43, 21, -1 };
 
-	private static int accumulatedScrollDelta = 0;
+	public static int accumulatedScrollDelta = 0;
 	private static int remainingHighlightTicks = 0;
 	private static int textOffset = 0;
+	private static int currentIndex;
 
+	public static boolean moveToCorrectSlot = false;
 	public static boolean renderStatusBars = true;
 	public static boolean renderPushedStatusBars = false;
 	public static boolean renderMountInfo = true;
 	private static boolean renderCustomExpBar = false;
+	private static boolean renderEntireBar = false;
 	private static boolean wasKeyDown = false;
 	private static boolean renderCustomMountInfo = false;
 
 	private static final int WIDTH = 22;
-	public static final int HEIGHT = 61;
+	public static final int HEIGHT = 66;
 
 	private static MinecraftClient mc = MinecraftClient.getInstance();
 
 	private static ItemStack highlightingItemStack = ItemStack.EMPTY;
 
-	private static final Identifier TEXTURE = new Identifier(MOD_ID, "textures/gui/verticalbar.png");
+	private static final Identifier VERT_TEXTURE = new Identifier(MOD_ID, "textures/gui/verticalbar.png");
+	private static final Identifier TEXTURE = new Identifier(InventoryHotswap.MOD_ID,
+			"textures/gui/largebarselection.png");
 	protected static final Identifier WIDGETS_TEXTURE_PATH = new Identifier("textures/gui/widgets.png");
 
-	private static final KeyBinding verticalScroll = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+	public static final KeyBinding verticalScroll = KeyBindingHelper.registerKeyBinding(new KeyBinding(
 			MOD_ID + ".key.verticalscroll", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_LEFT_ALT, MOD_ID + ".key.categories"));
 
 	@Override
@@ -88,7 +92,6 @@ public class InventoryHotswap implements ModInitializer {
 			DefaultedList<ItemStack> inventory = mc.player.inventory.main;
 			int currentIndex = mc.player.inventory.selectedSlot;
 			if (wasKeyDown) {
-
 				mc.options.heldItemTooltips = false;
 
 				int scaledWidth = mc.getWindow().getScaledWidth();
@@ -101,60 +104,119 @@ public class InventoryHotswap implements ModInitializer {
 				TextureManager textureManager = mc.getTextureManager();
 				ItemRenderer itemRenderer = mc.getItemRenderer();
 				TextRenderer fontRenderer = mc.textRenderer;
+				if (renderEntireBar) {
 
-				RenderSystem.pushMatrix();
-				RenderSystem.color4f(1F, 1F, 1F, 1.0F);
-				RenderSystem.enableBlend();
-				textureManager.bindTexture(WIDGETS_TEXTURE_PATH);
+					RenderSystem.pushMatrix();
+					RenderSystem.color4f(1F, 1F, 1F, 1.0F);
+					RenderSystem.enableBlend();
 
-				gui.drawTexture(matrixStack, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
+					textureManager.bindTexture(WIDGETS_TEXTURE_PATH);
+					for (int i = 0; i < 4; i++) {
+						gui.drawTexture(matrixStack, width - 91, scaledHeight - WIDTH - (i * 22), 0, 0, 182, 22);
+					}
 
-				RenderSystem.disableBlend();
-				RenderSystem.popMatrix();
-				// Render items in re-rendered hotbar
-				for (int i1 = 0; i1 < 9; ++i1) {
-					int j1 = width - 90 + i1 * 20 + 2;
-					int k1 = scaledHeight - 16 - 3;
-					renderHotbarItem(j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
-				}
+					RenderSystem.disableBlend();
+					RenderSystem.popMatrix();
+					for (int k = 3; k > 0; k--) {
+						int l = Config.INSTANCE.inverted ? Math.abs(k - 3) + 1 : k;
+						fontRenderer.draw(matrixStack, String.valueOf(k), width - 98, scaledHeight - 13 - (l * 22),
+								0xFFFFFF);
+					}
 
-				RenderSystem.pushMatrix();
-				RenderSystem.color4f(1F, 1F, 1F, 1.0F);
-				RenderSystem.enableBlend();
+					for (int i1 = 0; i1 < 9; ++i1) {
+						// Render all item sprites in the multi bar display
+						int j1 = width - 90 + i1 * 20 + 2;
+						int k1 = scaledHeight - 16 - 3;
+						renderHotbarItem(j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
+						renderHotbarItem(j1, k1 - 22, tickDelta, mc.player, inventory.get(i1 + 27), itemRenderer,
+								fontRenderer);
+						renderHotbarItem(j1, k1 - 44, tickDelta, mc.player, inventory.get(i1 + 18), itemRenderer,
+								fontRenderer);
+						renderHotbarItem(j1, k1 - 66, tickDelta, mc.player, inventory.get(i1 + 9), itemRenderer,
+								fontRenderer);
 
-				textureManager.bindTexture(TEXTURE);
-				// Render the verticalbar
-				gui.drawTexture(matrixStack, width - 91 + (currentIndex * (WIDTH - 2)), scaledHeight - WIDTH - HEIGHT,
-						0, 0, WIDTH, HEIGHT);
+					}
+					RenderSystem.pushMatrix();
+					RenderSystem.color4f(1F, 1F, 1F, 1.0F);
+					RenderSystem.enableBlend();
 
-				// Render items in the verticalbar
-				for (int i = 9, j = 0; i < 36; i += 9, j += 20) {
-					ItemStack stack = inventory.get(currentIndex + i);
-					int count = stack.getCount();
-					itemRenderer.renderInGui(stack, width - 88 + (currentIndex * (WIDTH - 2)),
-							scaledHeight - WIDTH - HEIGHT + 3 + j);
-					itemRenderer.renderGuiItemOverlay(fontRenderer, stack, width - 88 + (currentIndex * (WIDTH - 2)),
-							scaledHeight - WIDTH - HEIGHT + 3 + j, count == 1 ? "" : Integer.toString(count));
-				}
-				textureManager.bindTexture(WIDGETS_TEXTURE_PATH);
-				// Render the selection square
-				gui.drawTexture(matrixStack, width - 92 + (currentIndex * (WIDTH - 2)),
-						scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 22, 24, 24);
+					textureManager.bindTexture(TEXTURE);
 
-				renderHeldItemTooltip(matrixStack, scaledWidth, scaledHeight, fontRenderer);
+					gui.drawTexture(matrixStack, width - 92, scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 0, 184,
+							24);
 
-				// Reset the icon texture to stop hearts and hunger from being screwed up.
-				textureManager.bindTexture(DrawableHelper.GUI_ICONS_TEXTURE);
+					textureManager.bindTexture(DrawableHelper.GUI_ICONS_TEXTURE);
 
-				renderMountHealth(matrixStack);
-				if (mc.player.hasJumpingMount()) {
-					renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+					renderMountHealth(matrixStack);
+					if (mc.player.hasJumpingMount()) {
+						renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+					} else {
+						renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+					}
+					RenderSystem.disableBlend();
+					RenderSystem.popMatrix();
 				} else {
-					renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
-				}
-				RenderSystem.disableBlend();
-				RenderSystem.popMatrix();
 
+					RenderSystem.pushMatrix();
+					RenderSystem.color4f(1F, 1F, 1F, 1.0F);
+					RenderSystem.enableBlend();
+					textureManager.bindTexture(WIDGETS_TEXTURE_PATH);
+
+					gui.drawTexture(matrixStack, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
+
+					RenderSystem.disableBlend();
+					RenderSystem.popMatrix();
+					// Render items in re-rendered hotbar
+					for (int i1 = 0; i1 < 9; ++i1) {
+						int j1 = width - 90 + i1 * 20 + 2;
+						int k1 = scaledHeight - 16 - 3;
+						renderHotbarItem(j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
+					}
+
+					RenderSystem.pushMatrix();
+					RenderSystem.color4f(1F, 1F, 1F, 1.0F);
+					RenderSystem.enableBlend();
+
+					textureManager.bindTexture(VERT_TEXTURE);
+					// Render the verticalbar
+					gui.drawTexture(matrixStack, width - 91 + (currentIndex * (WIDTH - 2)),
+							scaledHeight - WIDTH - HEIGHT, 0, 0, WIDTH, HEIGHT);
+
+					for (int k = 3; k > 0; k--) {
+						int l = Config.INSTANCE.inverted ? Math.abs(k - 3) + 1 : k;
+						fontRenderer.draw(matrixStack, String.valueOf(k), width - 98, scaledHeight - 13 - (l * 22),
+								0xFFFFFF);
+					}
+
+					// Render items in the verticalbar
+					for (int i = 27, j = 22; i > 0; i -= 9, j += 22) {
+						int j1 = width - 88 + (currentIndex * (WIDTH - 2));
+						int k1 = scaledHeight - 16 - 3;
+						ItemStack stack = inventory.get(currentIndex + i);
+
+						renderHotbarItem(j1, k1 - j, tickDelta, mc.player, stack, itemRenderer, fontRenderer);
+					}
+
+					textureManager.bindTexture(WIDGETS_TEXTURE_PATH);
+					// Render the selection square
+					gui.drawTexture(matrixStack, width - 92 + (currentIndex * (WIDTH - 2)),
+							scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 22, 24, 24);
+
+					renderHeldItemTooltip(matrixStack, scaledWidth, scaledHeight, fontRenderer);
+
+					// Reset the icon texture to stop hearts and hunger from being screwed up.
+					textureManager.bindTexture(DrawableHelper.GUI_ICONS_TEXTURE);
+
+					renderMountHealth(matrixStack);
+					if (mc.player.hasJumpingMount()) {
+						renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+					} else {
+						renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+					}
+					RenderSystem.disableBlend();
+					RenderSystem.popMatrix();
+
+				}
 			}
 		});
 	}
@@ -360,9 +422,6 @@ public class InventoryHotswap implements ModInitializer {
 			ClientPlayerInteractionManager interactionManager = client.interactionManager;
 			PlayerEntity player = client.player;
 			if (player != null) {
-				if (mc.player.isRiding()) {
-					System.out.println("Riding");
-				}
 				ItemStack stack = client.player.inventory.main.get(getIndex(client.player.inventory.selectedSlot));
 				if (stack.isEmpty()) {
 					remainingHighlightTicks = 0;
@@ -381,6 +440,13 @@ public class InventoryHotswap implements ModInitializer {
 			if (verticalScroll.isPressed() && mc.currentScreen == null) {
 				HudTypes config = Config.INSTANCE.type;
 				CustomHudRenderer.renderHotbar = false;
+				if (player.isSneaking()) {
+					renderEntireBar = true;
+					if (config == HudTypes.OVERLAY) {
+						config = HudTypes.INVISIBLE;
+					}
+				}
+
 				switch (config) {
 
 				case PUSHED:
@@ -406,10 +472,16 @@ public class InventoryHotswap implements ModInitializer {
 				wasKeyDown = true;
 			} else if (wasKeyDown) {
 				if (accumulatedScrollDelta != 0) {
-					int currentIndex = mc.player.inventory.selectedSlot;
-
-					interactionManager.clickSlot(player.playerScreenHandler.syncId, getIndex(currentIndex),
-							currentIndex, SlotActionType.SWAP, player);
+					currentIndex = mc.player.inventory.selectedSlot;
+					if (renderEntireBar) {
+						for (int i = 0; i < 9; i++) {
+							interactionManager.clickSlot(player.playerScreenHandler.syncId, getIndex(i), i,
+									SlotActionType.SWAP, mc.player);
+						}
+					} else {
+						interactionManager.clickSlot(player.playerScreenHandler.syncId, getIndex(currentIndex),
+								currentIndex, SlotActionType.SWAP, player);
+					}
 
 				}
 				clear();

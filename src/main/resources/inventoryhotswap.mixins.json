@@ -8,7 +8,8 @@
 	"client": [
 		"MouseInputMixin",
 		"HideHudMixin",
-		"MoveHudMixin"
+		"MoveHudMixin",
+		"KeyboardInputMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
