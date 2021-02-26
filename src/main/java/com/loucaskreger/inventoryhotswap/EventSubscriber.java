@@ -534,7 +534,7 @@ public class EventSubscriber {
 		if (vertScroll.isKeyDown() && mc.currentScreen == null) {
 			ForgeIngameGui.renderHotbar = false;
 
-			if (mc.player.isSneaking()) {
+			if (mc.player.isSneaking() && ClientConfig.sneakSwapsEntireRows.get()) {
 				if (ClientConfig.guiRenderType.get() == InventoryHotswap.GuiRenderType.OVERLAY)
 					isGuiInvisible = true;
 				renderEntireBar = true;
