@@ -13,6 +13,7 @@ public class Config {
 
 	public static InventoryHotswap.GuiRenderType guiRenderType;
 	public static boolean inverted;
+	public static boolean sneakSwapsEntireRows;
 
 	static {
 		final Pair<ClientConfig, ForgeConfigSpec> specPair = new ForgeConfigSpec.Builder().configure(ClientConfig::new);
@@ -23,5 +24,6 @@ public class Config {
 	public static void bakeConfig() {
 		guiRenderType = ClientConfig.guiRenderType.get();
 		inverted = ClientConfig.inverted.get();
+		sneakSwapsEntireRows = ClientConfig.sneakSwapsEntireRows.get();
 	}
 }

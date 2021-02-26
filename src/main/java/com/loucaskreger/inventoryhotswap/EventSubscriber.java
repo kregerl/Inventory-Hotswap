@@ -249,7 +249,8 @@ public class EventSubscriber {
 
 					for (int k = 3; k > 0; k--) {
 						int l = ClientConfig.inverted.get() ? Math.abs(k - 3) + 1 : k;
-						fontRenderer.drawString(String.valueOf(k), width - 98 + (currentIndex * (WIDTH - 2)), scaledHeight - 13 - (l * 22), 0xFFFFFF);
+						fontRenderer.drawString(String.valueOf(k), width - 98 + (currentIndex * (WIDTH - 2)),
+								scaledHeight - 13 - (l * 22), 0xFFFFFF);
 					}
 					// Render items in the verticalbar
 					for (int i = 27, j = 22; i > 0; i -= 9, j += 22) {
@@ -531,7 +532,7 @@ public class EventSubscriber {
 		if (vertScroll.isKeyDown() && mc.currentScreen == null) {
 			ForgeIngameGui.renderHotbar = false;
 
-			if (mc.player.isSneaking()) {
+			if (mc.player.isSneaking() && ClientConfig.sneakSwapsEntireRows.get()) {
 				if (ClientConfig.guiRenderType.get() == InventoryHotswap.GuiRenderType.OVERLAY)
 					isGuiInvisible = true;
 				renderEntireBar = true;
