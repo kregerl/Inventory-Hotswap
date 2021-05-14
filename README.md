@@ -18,8 +18,6 @@ Users can swap an entire row of their inventory at a time, this is done while pr
 
  
 
- 
-
 To edit how the selection bar is displayed go to .minecraft/config/inventoryhotswap-client.toml and choose one of the following options: 
 
 Note: Fabric users must must edit the file at .minecraft/config/inventoryhotswap.json
