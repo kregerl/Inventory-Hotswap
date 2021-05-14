@@ -1,3 +1,4 @@
+# Inventory Hotswap
 Inventory Hotswap is a client side mod that allows the users to swap their selected item with the items in the column above it.
 
 Simply hold the keybind (Default: Left Alt) and use your scroll wheel to select the item you'd like to swap. Since this mod alters the default GUI overlay there are some config options to allow users to customize their GUI when the keybind is pressed.
