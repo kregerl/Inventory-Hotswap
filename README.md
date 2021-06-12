@@ -61,4 +61,4 @@ Forge: 1.15.2 - 1.16.5
 
 Fabric 1.16.1 - 1.16.4
 
-    - Jar labeled 1.16 will work for versions 1.16.1 - 1.16.4
+    - Jar labeled 1.16 will work for versions 1.16.1 - 1.17
