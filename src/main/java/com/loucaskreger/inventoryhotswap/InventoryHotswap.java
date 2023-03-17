@@ -149,7 +149,7 @@ public class InventoryHotswap implements ModInitializer {
                     RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
 
                     renderMountHealth(matrixStack);
-                    if (mc.player.hasJumpingMount()) {
+                    if (mc.player.getJumpingMount() != null) {
                         renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
                     } else {
                         renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
@@ -209,7 +209,7 @@ public class InventoryHotswap implements ModInitializer {
                     RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
 
                     renderMountHealth(matrixStack);
-                    if (mc.player.hasJumpingMount()) {
+                    if (mc.player.getJumpingMount() != null) {
                         renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
                     } else {
                         renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
