@@ -9,6 +9,7 @@ public class ClientConfig {
 
     public static EnumValue<GuiRenderType> guiRenderType;
     public static BooleanValue inverted;
+    public static BooleanValue alwaysSwapEntireHotBar;
 
     public ClientConfig(ForgeConfigSpec.Builder builder) {
         guiRenderType = builder.comment(
@@ -17,6 +18,7 @@ public class ClientConfig {
                         + "If set to OVERLAY, then the survival gui will not be moved and the vertical selection bar will render over it")
                 .defineEnum("guiRenderType", GuiRenderType.PUSHED);
         inverted = builder.comment("Set to true if you want the quick selection key presses to be inverted.").define("invertQuickSelection", false);
+        alwaysSwapEntireHotBar = builder.comment("Set to true if you want to always change the entire hotbar row with another one.").define("alwaysSwapEntireHotBar", false);
     }
 
 }

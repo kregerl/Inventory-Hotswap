@@ -24,9 +24,10 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.InputEvent;
-import net.minecraftforge.client.event.RenderGameOverlayEvent;
-import net.minecraftforge.client.gui.ForgeIngameGui;
-import net.minecraftforge.client.gui.OverlayRegistry;
+import net.minecraftforge.client.event.RenderGuiEvent;
+import net.minecraftforge.client.event.RenderGuiOverlayEvent;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions.FontContext;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -34,15 +35,16 @@ import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.util.ObfuscationReflectionHelper;
 import org.lwjgl.glfw.GLFW;
 
-import java.awt.*;
+import java.util.Set;
 
+import static net.minecraftforge.client.gui.overlay.VanillaGuiOverlay.*;
 import static org.lwjgl.glfw.GLFW.*;
 
 @Mod.EventBusSubscriber(modid = InventoryHotswap.MOD_ID, value = Dist.CLIENT)
 public class EventSubscriber {
 
     public static final KeyMapping vertScroll = new KeyMapping(InventoryHotswap.MOD_ID + ".key.verticalscroll",
-            GLFW_KEY_LEFT_ALT, InventoryHotswap.MOD_ID + ".key.categories");
+        GLFW_KEY_LEFT_ALT, InventoryHotswap.MOD_ID + ".key.categories");
 
     private static final int[] slotsScrollDown = {0, 9, 18, 27};
     private static final int[] slotsScrollUp = {0, 27, 18, 9};
@@ -51,24 +53,23 @@ public class EventSubscriber {
 //	private static final int[] largeSelectedScrollPositions = { 65, 43, 21, -1 };
 
     /**
-     * The value of the left_height and right_height in {@link ForgeIngameGui}
+     * The value of the left_height and right_height in {@link ForgeGui}
      */
     private static final int DEFAULT_GUI_HEIGHT = 39;
     private static final int WIDTH = 22;
     private static final int HEIGHT = 66;
 
     private static final ResourceLocation VERT_TEXTURE = new ResourceLocation(InventoryHotswap.MOD_ID,
-            "textures/gui/verticalbar.png");
+        "textures/gui/verticalbar.png");
     private static final ResourceLocation TEXTURE = new ResourceLocation(InventoryHotswap.MOD_ID,
-            "textures/gui/largebarselection.png");
+        "textures/gui/largebarselection.png");
 
     private static ResourceLocation WIDGETS_TEXTURE_PATH;
-
 
     static {
 
         WIDGETS_TEXTURE_PATH = ObfuscationReflectionHelper.getPrivateValue(Gui.class, null,
-                /* WIDGETS_TEXTURE_PATH */ "f_92982_");
+            /* WIDGETS_TEXTURE_PATH */ "f_92982_");
     }
 
     private static int accumulatedScrollDelta = 0;
@@ -94,7 +95,7 @@ public class EventSubscriber {
     }
 
     @SubscribeEvent
-    public static void onMouseScroll(final InputEvent.MouseScrollEvent event) {
+    public static void onMouseScroll(final InputEvent.MouseScrollingEvent event) {
         if (wasKeyDown) {
             event.setCanceled(true);
             accumulatedScrollDelta += event.getScrollDelta();
@@ -103,7 +104,7 @@ public class EventSubscriber {
     }
 
     @SubscribeEvent
-    public static void onKeyPressed(final InputEvent.KeyInputEvent event) {
+    public static void onKeyPressed(final InputEvent.Key event) {
         if (wasKeyDown && event.getAction() == GLFW.GLFW_PRESS) {
             int inverted = ClientConfig.inverted.get() ? -1 : 1;
             switch (event.getKey()) {
@@ -123,37 +124,34 @@ public class EventSubscriber {
                     moveToCorrectSlot = true;
                     break;
             }
-
         }
-
     }
 
+    private static final Set<ResourceLocation> HIDE_FOR_INVISIBLE =
+        Set.of(FOOD_LEVEL.id(), ARMOR_LEVEL.id(), AIR_LEVEL.id(), MOUNT_HEALTH.id(), EXPERIENCE_BAR.id(), PLAYER_HEALTH.id(), JUMP_BAR.id());
+
+    private static final Set<ResourceLocation> HIDE_FOR_PUSHED =
+        Set.of(EXPERIENCE_BAR.id(), MOUNT_HEALTH.id(), JUMP_BAR.id());
+
     @SubscribeEvent
-    public static void onGUIRender(final RenderGameOverlayEvent.Pre event) {
-        if (event.getType().equals(RenderGameOverlayEvent.ElementType.ALL)) {
-            if (wasKeyDown) {
-                if (isGuiInvisible) {
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.FOOD_LEVEL_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.PLAYER_HEALTH_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.ARMOR_LEVEL_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.AIR_LEVEL_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.EXPERIENCE_BAR_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.MOUNT_HEALTH_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.JUMP_BAR_ELEMENT, false);
-                } else if (isGuiPushed) {
-                    ObfuscationReflectionHelper.setPrivateValue(ForgeIngameGui.class, (ForgeIngameGui) mc.gui, DEFAULT_GUI_HEIGHT + HEIGHT, "left_height");
-                    ObfuscationReflectionHelper.setPrivateValue(ForgeIngameGui.class, (ForgeIngameGui) mc.gui, DEFAULT_GUI_HEIGHT + HEIGHT, "right_height");
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.EXPERIENCE_BAR_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.MOUNT_HEALTH_ELEMENT, false);
-                    OverlayRegistry.enableOverlay(ForgeIngameGui.JUMP_BAR_ELEMENT, false);
-                    textOffset = 29;
-                }
+    public static void onGUIRender(final RenderGuiOverlayEvent.Pre event) {
+        if (vertScroll.isDown() && mc.screen == null && event.getOverlay().id().equals(HOTBAR.id()))
+            event.setCanceled(true);
+        if (wasKeyDown) {
+            if (isGuiInvisible && HIDE_FOR_INVISIBLE.contains(event.getOverlay().id())) {
+                event.setCanceled(true);
+            } else if (isGuiPushed) {
+                ObfuscationReflectionHelper.setPrivateValue(ForgeGui.class, (ForgeGui) mc.gui, DEFAULT_GUI_HEIGHT + HEIGHT, "leftHeight");
+                ObfuscationReflectionHelper.setPrivateValue(ForgeGui.class, (ForgeGui) mc.gui, DEFAULT_GUI_HEIGHT + HEIGHT, "rightHeight");
+                if (HIDE_FOR_PUSHED.contains(event.getOverlay().id()))
+                    event.setCanceled(true);
+                textOffset = 29;
             }
         }
     }
 
     @SubscribeEvent
-    public static void onGUIRender(final RenderGameOverlayEvent.Post event) {
+    public static void onGUIRender(final RenderGuiEvent.Post event) {
 
         Minecraft mc = Minecraft.getInstance();
         NonNullList<ItemStack> inventory = mc.player.getInventory().items;
@@ -174,125 +172,125 @@ public class EventSubscriber {
             Font fontRenderer = mc.font;
             PoseStack matrixStack = event.getPoseStack();
 
-            if (event.getType().equals(RenderGameOverlayEvent.ElementType.ALL)) {
-                if (renderEntireBar) {
-                    matrixStack.pushPose();
-                    RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
-                    RenderSystem.enableBlend();
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
-                    for (int i = 0; i < 4; i++) {
-                        gui.blit(matrixStack, width - 91, scaledHeight - WIDTH - (i * 22), 0, 0, 182, 22);
-                    }
-
-                    RenderSystem.disableBlend();
-                    matrixStack.popPose();
-
-                    for (int k = 3; k > 0; k--) {
-                        int l = ClientConfig.inverted.get() ? Math.abs(k - 3) + 1 : k;
-                        fontRenderer.draw(matrixStack, String.valueOf(k), width - 98,
-                                scaledHeight - 13 - (l * 22), 0xFFFFFF);
-                    }
-
-                    for (int i1 = 0; i1 < 9; ++i1) {
-                        // Render all item sprites in the multi bar display
-                        int j1 = width - 90 + i1 * 20 + 2;
-                        int k1 = scaledHeight - 16 - 3;
-
-                        renderHotbarItem(matrixStack, j1, k1, event.getPartialTick(), inventory.get(i1), itemRenderer,
-                                fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 22, event.getPartialTick(), inventory.get(i1 + 27),
-                                itemRenderer, fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 44, event.getPartialTick(), inventory.get(i1 + 18),
-                                itemRenderer, fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 66, event.getPartialTick(), inventory.get(i1 + 9),
-                                itemRenderer, fontRenderer);
-                    }
-                    matrixStack.pushPose();
-                    RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
-                    RenderSystem.enableBlend();
-
-                    RenderSystem.setShaderTexture(0, TEXTURE);
-                    // Render the selection square
-                    gui.blit(matrixStack, width - 92, scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 0, 184, 24);
-
-                    RenderSystem.setShaderTexture(0, Gui.GUI_ICONS_LOCATION);
-                    int x = scaledWidth / 2 - 91;
-
-                    renderVehicleHealth(matrixStack, scaledHeight, scaledWidth);
-                    if (mc.player.isRidingJumpable()) {
-                        renderHorseJumpBar(matrixStack, x, scaledHeight);
-                    } else {
-                        renderExpBar(matrixStack, x);
-                    }
-                    RenderSystem.disableBlend();
-                    matrixStack.popPose();
-
-                } else {
-
-                    matrixStack.pushPose();
-                    RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
-                    RenderSystem.enableBlend();
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
-                    // Re-render hotbar without selection
-                    gui.blit(matrixStack, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
-
-                    RenderSystem.disableBlend();
-                    matrixStack.popPose();
-                    // Render items in re-rendered hotbar
-                    for (int i1 = 0; i1 < 9; ++i1) {
-                        int j1 = width - 90 + i1 * 20 + 2;
-                        int k1 = scaledHeight - 16 - 3;
-                        renderHotbarItem(matrixStack, j1, k1, event.getPartialTick(), inventory.get(i1), itemRenderer,
-                                fontRenderer);
-                    }
-
-                    matrixStack.pushPose();
-                    RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
-                    RenderSystem.enableBlend();
-
-                    RenderSystem.setShaderTexture(0, VERT_TEXTURE);
-                    // Render the verticalbar
-                    gui.blit(matrixStack, width - 91 + (currentIndex * (WIDTH - 2)), scaledHeight - WIDTH - HEIGHT, 0,
-                            0, WIDTH, HEIGHT);
-
-                    for (int k = 3; k > 0; k--) {
-                        int l = ClientConfig.inverted.get() ? Math.abs(k - 3) + 1 : k;
-                        fontRenderer.draw(matrixStack, String.valueOf(k),
-                                width - 98 + (currentIndex * (WIDTH - 2)), scaledHeight - 13 - (l * 22), 0xFFFFFF);
-                    }
-                    // Render items in the verticalbar
-                    for (int i = 27, j = 22; i > 0; i -= 9, j += 22) {
-                        int j1 = width - 88 + (currentIndex * (WIDTH - 2));
-                        int k1 = scaledHeight - 16 - 3;
-                        ItemStack stack = inventory.get(currentIndex + i);
-
-                        renderHotbarItem(matrixStack, j1, k1 - j, event.getPartialTick(), stack, itemRenderer,
-                                fontRenderer);
-                    }
-
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
-                    // Render the selection square
-                    gui.blit(matrixStack, width - 92 + (currentIndex * (WIDTH - 2)),
-                            scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 22, 24, 24);
-
-                    renderSelectedItem(matrixStack, mc, scaledWidth, scaledHeight,
-                            fontRenderer);
-
-                    // Reset the icon texture to stop hearts and hunger from being screwed up.
-                    RenderSystem.setShaderTexture(0, Gui.GUI_ICONS_LOCATION);
-
-                    int x = scaledWidth / 2 - 91;
-
-                    renderVehicleHealth(matrixStack, scaledHeight, scaledWidth);
-                    if (mc.player.isRidingJumpable()) {
-                        renderHorseJumpBar(matrixStack, x, scaledHeight);
-                    } else {
-                        renderExpBar(matrixStack, x);
-                    }
-                    RenderSystem.disableBlend();
-                    matrixStack.popPose();
+            if (renderEntireBar) {
+                matrixStack.pushPose();
+                RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
+                RenderSystem.enableBlend();
+                RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
+                for (int i = 0; i < 4; i++) {
+                    gui.blit(matrixStack, width - 91, scaledHeight - WIDTH - (i * 22), 0, 0, 182, 22);
                 }
 
+                RenderSystem.disableBlend();
+                matrixStack.popPose();
+
+                for (int k = 3; k > 0; k--) {
+                    int l = ClientConfig.inverted.get() ? Math.abs(k - 3) + 1 : k;
+                    fontRenderer.draw(matrixStack, String.valueOf(k), width - 98,
+                        scaledHeight - 13 - (l * 22), 0xFFFFFF);
+                }
+
+                for (int i1 = 0; i1 < 9; ++i1) {
+                    // Render all item sprites in the multi bar display
+                    int j1 = width - 90 + i1 * 20 + 2;
+                    int k1 = scaledHeight - 16 - 3;
+
+                    renderHotbarItem(matrixStack, j1, k1, event.getPartialTick(), inventory.get(i1), itemRenderer,
+                        fontRenderer);
+                    renderHotbarItem(matrixStack, j1, k1 - 22, event.getPartialTick(), inventory.get(i1 + 27),
+                        itemRenderer, fontRenderer);
+                    renderHotbarItem(matrixStack, j1, k1 - 44, event.getPartialTick(), inventory.get(i1 + 18),
+                        itemRenderer, fontRenderer);
+                    renderHotbarItem(matrixStack, j1, k1 - 66, event.getPartialTick(), inventory.get(i1 + 9),
+                        itemRenderer, fontRenderer);
+                }
+                matrixStack.pushPose();
+                RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
+                RenderSystem.enableBlend();
+
+                RenderSystem.setShaderTexture(0, TEXTURE);
+                // Render the selection square
+                gui.blit(matrixStack, width - 92, scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 0, 184, 24);
+
+                RenderSystem.setShaderTexture(0, Gui.GUI_ICONS_LOCATION);
+                int x = scaledWidth / 2 - 91;
+
+                if (ClientConfig.guiRenderType.get() == GuiRenderType.PUSHED) {
+                    renderVehicleHealth(matrixStack, scaledHeight, scaledWidth);
+                    if (mc.player.isRidingJumpable()) {
+                        renderHorseJumpBar(matrixStack, x, scaledHeight);
+                    } else {
+                        renderExpBar(matrixStack, x);
+                    }
+                }
+                RenderSystem.disableBlend();
+                matrixStack.popPose();
+            } else {
+
+                matrixStack.pushPose();
+                RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
+                RenderSystem.enableBlend();
+                RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
+                // Re-render hotbar without selection
+                gui.blit(matrixStack, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
+
+                RenderSystem.disableBlend();
+                matrixStack.popPose();
+                // Render items in re-rendered hotbar
+                for (int i1 = 0; i1 < 9; ++i1) {
+                    int j1 = width - 90 + i1 * 20 + 2;
+                    int k1 = scaledHeight - 16 - 3;
+                    renderHotbarItem(matrixStack, j1, k1, event.getPartialTick(), inventory.get(i1), itemRenderer,
+                        fontRenderer);
+                }
+
+                matrixStack.pushPose();
+                RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
+                RenderSystem.enableBlend();
+
+                RenderSystem.setShaderTexture(0, VERT_TEXTURE);
+                // Render the verticalbar
+                gui.blit(matrixStack, width - 91 + (currentIndex * (WIDTH - 2)), scaledHeight - WIDTH - HEIGHT, 0,
+                    0, WIDTH, HEIGHT);
+
+                for (int k = 3; k > 0; k--) {
+                    int l = ClientConfig.inverted.get() ? Math.abs(k - 3) + 1 : k;
+                    fontRenderer.draw(matrixStack, String.valueOf(k),
+                        width - 98 + (currentIndex * (WIDTH - 2)), scaledHeight - 13 - (l * 22), 0xFFFFFF);
+                }
+                // Render items in the verticalbar
+                for (int i = 27, j = 22; i > 0; i -= 9, j += 22) {
+                    int j1 = width - 88 + (currentIndex * (WIDTH - 2));
+                    int k1 = scaledHeight - 16 - 3;
+                    ItemStack stack = inventory.get(currentIndex + i);
+
+                    renderHotbarItem(matrixStack, j1, k1 - j, event.getPartialTick(), stack, itemRenderer,
+                        fontRenderer);
+                }
+
+                RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
+                // Render the selection square
+                gui.blit(matrixStack, width - 92 + (currentIndex * (WIDTH - 2)),
+                    scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 22, 24, 24);
+
+                renderSelectedItem(matrixStack, mc, scaledWidth, scaledHeight,
+                    fontRenderer);
+
+                // Reset the icon texture to stop hearts and hunger from being screwed up.
+                RenderSystem.setShaderTexture(0, Gui.GUI_ICONS_LOCATION);
+
+                int x = scaledWidth / 2 - 91;
+
+                if (ClientConfig.guiRenderType.get() == GuiRenderType.PUSHED) {
+                    renderVehicleHealth(matrixStack, scaledHeight, scaledWidth);
+                    if (mc.player.isRidingJumpable()) {
+                        renderHorseJumpBar(matrixStack, x, scaledHeight);
+                    } else {
+                        renderExpBar(matrixStack, x);
+                    }
+                }
+                RenderSystem.disableBlend();
+                matrixStack.popPose();
             }
         }
     }
@@ -310,7 +308,6 @@ public class EventSubscriber {
         }
         return selectedScrollPositions[Math.abs(Math.abs(accumulatedScrollDelta) - selectedScrollPositions.length)];
     }
-
 
     /**
      * Stolen straight from the IngameGUI hotbar rendering
@@ -391,7 +388,6 @@ public class EventSubscriber {
 
                     i1 -= 10;
                 }
-
             }
         }
     }
@@ -474,7 +470,7 @@ public class EventSubscriber {
             int i = fontRenderer.width(highlightTip);
             int j = (scaledWidth - i) / 2;
             int k = mc.gameMode.getPlayerMode().isSurvival() ? scaledHeight - HEIGHT - 31 - textOffset
-                    : scaledHeight - HEIGHT - 46;
+                : scaledHeight - HEIGHT - 46;
             if (!mc.gameMode.canHurtPlayer()) {
                 k += 14;
             }
@@ -490,11 +486,12 @@ public class EventSubscriber {
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
                 Gui.fill(matrixStack, j - 2, k - 2, j + i + 2, k + 9 + 2,
-                        mc.options.getBackgroundColor(0));
-                Font font = net.minecraftforge.client.RenderProperties.get(highlightingItemStack).getFont(highlightingItemStack);
+                    mc.options.getBackgroundColor(0));
+
+                Font font = net.minecraftforge.client.extensions.common.IClientItemExtensions.of(highlightingItemStack).getFont(highlightingItemStack, FontContext.TOOLTIP);
                 if (font == null) {
                     fontRenderer.drawShadow(matrixStack, highlightTip, (float) j, (float) k,
-                            16777215 + (l << 24));
+                        16777215 + (l << 24));
                 } else {
                     j = (scaledWidth - font.width(highlightTip)) / 2;
                     j = (scaledWidth - font.width(highlightTip)) / 2;
@@ -517,9 +514,9 @@ public class EventSubscriber {
             if (itemstack.isEmpty()) {
                 remainingHighlightTicks = 0;
             } else if (!highlightingItemStack.isEmpty() && itemstack.getItem() == highlightingItemStack.getItem()
-                    && (itemstack.getDisplayName().equals(highlightingItemStack.getDisplayName())
-                    && itemstack.getHighlightTip(itemstack.getDisplayName()).equals(
-                    highlightingItemStack.getHighlightTip(highlightingItemStack.getDisplayName())))) {
+                && (itemstack.getDisplayName().equals(highlightingItemStack.getDisplayName())
+                && itemstack.getHighlightTip(itemstack.getDisplayName()).equals(
+                highlightingItemStack.getHighlightTip(highlightingItemStack.getDisplayName())))) {
                 if (remainingHighlightTicks > 0) {
                     --remainingHighlightTicks;
                 }
@@ -530,22 +527,19 @@ public class EventSubscriber {
             highlightingItemStack = itemstack;
         }
 
-
         if (vertScroll.isDown() && mc.screen == null) {
-            OverlayRegistry.enableOverlay(ForgeIngameGui.HOTBAR_ELEMENT, false);
-
-            if (mc.player.isShiftKeyDown()) {
-                if (ClientConfig.guiRenderType.get() == GuiRenderType.OVERLAY)
+            if (mc.player.isShiftKeyDown() || ClientConfig.alwaysSwapEntireHotBar.get()) {
+                if (ClientConfig.guiRenderType.get() == GuiRenderType.INVISIBLE)
                     isGuiInvisible = true;
                 renderEntireBar = true;
             } else {
                 renderEntireBar = false;
                 // determines whether of not user wants survival gui parts rendered
                 isGuiInvisible = ClientConfig.guiRenderType.get() == GuiRenderType.INVISIBLE
-                        && pc.getPlayerMode().isSurvival();
+                    && pc.getPlayerMode().isSurvival();
 
                 isGuiPushed = ClientConfig.guiRenderType.get() == GuiRenderType.PUSHED
-                        && pc.getPlayerMode().isSurvival();
+                    && pc.getPlayerMode().isSurvival();
             }
             wasKeyDown = true;
         } else if (wasKeyDown) {
@@ -558,12 +552,10 @@ public class EventSubscriber {
                 } else {
 
                     pc.handleInventoryMouseClick(mc.player.inventoryMenu.containerId, getIndex(currentIndex), currentIndex, ClickType.SWAP,
-                            mc.player);
+                        mc.player);
                 }
-
             }
             clear();
-
         } else if (moveToCorrectSlot && currentIndex != -1) {
             mc.player.getInventory().selected = currentIndex;
             moveToCorrectSlot = false;
@@ -573,15 +565,6 @@ public class EventSubscriber {
     private static void clear() {
         wasKeyDown = false;
         accumulatedScrollDelta = 0;
-        OverlayRegistry.enableOverlay(ForgeIngameGui.HOTBAR_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.PLAYER_HEALTH_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.ARMOR_LEVEL_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.AIR_LEVEL_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.EXPERIENCE_BAR_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.FOOD_LEVEL_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.MOUNT_HEALTH_ELEMENT, true);
-        OverlayRegistry.enableOverlay(ForgeIngameGui.JUMP_BAR_ELEMENT, true);
-
         mc.options.heldItemTooltips = true;
         textOffset = 0;
         remainingHighlightTicks = 0;
@@ -598,5 +581,4 @@ public class EventSubscriber {
         }
         return result;
     }
-
 }

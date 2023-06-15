@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[41,)"
+loaderVersion = "[43,)"
 license = "MIT"
 
 [[mods]]
@@ -17,7 +17,7 @@ Quickly switch between items in your inventory.
 [[dependencies.inventoryhotswap]]
 modId = "forge"
 mandatory = true
-versionRange = "[41,)"
+versionRange = "[43,)"
 ordering = "AFTER"
 side = "BOTH"
 
