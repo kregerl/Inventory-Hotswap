@@ -117,4 +117,6 @@
            * Make "Potentially dangerous alternative prefix" a debug warning, not info.
            Co-authored-by: Curle <curle@gemwire.uk>
            Co-authored-by: sciwhiz12 <arnoldnunag12@gmail.com>
-
+ - 41.1.0  updated to Forge 1.19.2
+           * added a config option to always switch the entire hotbar row with another one
+           * fixed a bug hiding gui overlays when swapping the entire row

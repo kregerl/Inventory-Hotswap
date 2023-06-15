@@ -2,12 +2,11 @@ package com.loucaskreger.inventoryhotswap;
 
 import com.loucaskreger.inventoryhotswap.client.EventSubscriber;
 import com.loucaskreger.inventoryhotswap.config.Config;
-import net.minecraftforge.client.ClientRegistry;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.ModLoadingContext;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
@@ -31,8 +30,8 @@ public class InventoryHotswap {
 
     }
 
-    private void clientSetup(final FMLClientSetupEvent event) {
-        ClientRegistry.registerKeyBinding(EventSubscriber.vertScroll);
+    private void clientSetup(final RegisterKeyMappingsEvent event) {
+        event.register(EventSubscriber.vertScroll);
     }
 
 
