@@ -9,8 +9,7 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawableHelper;
-import net.minecraft.client.gui.hud.InGameHud;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerInteractionManager;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.render.item.ItemRenderer;
@@ -46,6 +45,7 @@ public class InventoryHotswap implements ModInitializer {
     public static boolean renderStatusBars = true;
     public static boolean renderPushedStatusBars = false;
     public static boolean renderMountInfo = true;
+    public static boolean heldItemTooltips = true;
     private static boolean renderCustomExpBar = false;
     private static boolean renderEntireBar = false;
     private static boolean wasKeyDown = false;
@@ -69,7 +69,8 @@ public class InventoryHotswap implements ModInitializer {
 
     private static final KeyBinding fullBarVerticalScroll = KeyBindingHelper.registerKeyBinding(new KeyBinding(MOD_ID + ".key.fullBarVerticalScroll", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_Z,
             MOD_ID + ".key.categories"));
-
+    
+    private static final Identifier ICONS = new Identifier("textures/gui/icons.png");
 
     @Override
     public void onInitialize() {
@@ -89,18 +90,18 @@ public class InventoryHotswap implements ModInitializer {
     }
 
     public static void onHudRender() {
-        HudRenderCallback.EVENT.register((matrixStack, tickDelta) -> {
+        HudRenderCallback.EVENT.register((drawContext, tickDelta) -> {
             DefaultedList<ItemStack> inventory = mc.player.getInventory().main;
             int currentIndex = mc.player.getInventory().selectedSlot;
             if (wasKeyDown) {
-                mc.options.heldItemTooltips = false;
+                heldItemTooltips = false;
 
                 int scaledWidth = mc.getWindow().getScaledWidth();
                 int scaledHeight = mc.getWindow().getScaledHeight();
 
                 int width = (scaledWidth / 2);
 
-                InGameHud gui = mc.inGameHud;
+                MatrixStack matrixStack = drawContext.getMatrices();
 
                 ItemRenderer itemRenderer = mc.getItemRenderer();
                 TextRenderer fontRenderer = mc.textRenderer;
@@ -111,29 +112,28 @@ public class InventoryHotswap implements ModInitializer {
                     RenderSystem.enableBlend();
 
                     // Replace textureManager calls with the below call.
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
                     for (int i = 0; i < 4; i++) {
-                        gui.drawTexture(matrixStack, width - 91, scaledHeight - WIDTH - (i * 22), 0, 0, 182, 22);
+                        drawContext.drawTexture(WIDGETS_TEXTURE_PATH, width - 91, scaledHeight - WIDTH - (i * 22), 0, 0, 182, 22);
                     }
 
                     RenderSystem.disableBlend();
                     matrixStack.pop();
                     for (int k = 3; k > 0; k--) {
                         int l = Config.INSTANCE.inverted ? Math.abs(k - 3) + 1 : k;
-                        fontRenderer.draw(matrixStack, String.valueOf(k), width - 98, scaledHeight - 13 - (l * 22),
-                                0xFFFFFF);
+                        drawContext.drawText(fontRenderer, String.valueOf(k), width - 98, scaledHeight - 13 - (l * 22),
+                                0xFFFFFF, false);
                     }
 
                     for (int i1 = 0; i1 < 9; ++i1) {
                         // Render all item sprites in the multi bar display
                         int j1 = width - 90 + i1 * 20 + 2;
                         int k1 = scaledHeight - 16 - 3;
-                        renderHotbarItem(matrixStack, j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 22, tickDelta, mc.player, inventory.get(i1 + 27), itemRenderer,
+                        renderHotbarItem(drawContext, j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
+                        renderHotbarItem(drawContext, j1, k1 - 22, tickDelta, mc.player, inventory.get(i1 + 27), itemRenderer,
                                 fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 44, tickDelta, mc.player, inventory.get(i1 + 18), itemRenderer,
+                        renderHotbarItem(drawContext, j1, k1 - 44, tickDelta, mc.player, inventory.get(i1 + 18), itemRenderer,
                                 fontRenderer);
-                        renderHotbarItem(matrixStack, j1, k1 - 66, tickDelta, mc.player, inventory.get(i1 + 9), itemRenderer,
+                        renderHotbarItem(drawContext, j1, k1 - 66, tickDelta, mc.player, inventory.get(i1 + 9), itemRenderer,
                                 fontRenderer);
 
                     }
@@ -141,18 +141,14 @@ public class InventoryHotswap implements ModInitializer {
                     RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
                     RenderSystem.enableBlend();
 
-                    RenderSystem.setShaderTexture(0, TEXTURE);
-
-                    gui.drawTexture(matrixStack, width - 92, scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 0, 184,
+                    drawContext.drawTexture(TEXTURE, width - 92, scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 0, 184,
                             24);
 
-                    RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
-
-                    renderMountHealth(matrixStack);
+                    renderMountHealth(drawContext);
                     if (mc.player.getJumpingMount() != null) {
-                        renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+                        renderMountJumpBar(drawContext, mc.getWindow().getScaledWidth() / 2 - 91);
                     } else {
-                        renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+                        renderExperienceBar(drawContext, mc.getWindow().getScaledWidth() / 2 - 91);
                     }
                     RenderSystem.disableBlend();
                     matrixStack.pop();
@@ -161,9 +157,8 @@ public class InventoryHotswap implements ModInitializer {
                     matrixStack.push();
                     RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
                     RenderSystem.enableBlend();
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
 
-                    gui.drawTexture(matrixStack, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
+                    drawContext.drawTexture(WIDGETS_TEXTURE_PATH, width - 91, scaledHeight - WIDTH, 0, 0, 182, 22);
 
                     RenderSystem.disableBlend();
                     matrixStack.pop();
@@ -171,22 +166,21 @@ public class InventoryHotswap implements ModInitializer {
                     for (int i1 = 0; i1 < 9; ++i1) {
                         int j1 = width - 90 + i1 * 20 + 2;
                         int k1 = scaledHeight - 16 - 3;
-                        renderHotbarItem(matrixStack, j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
+                        renderHotbarItem(drawContext, j1, k1, tickDelta, mc.player, inventory.get(i1), itemRenderer, fontRenderer);
                     }
 
                     matrixStack.push();
                     RenderSystem.setShaderColor(1F, 1F, 1F, 1.0F);
                     RenderSystem.enableBlend();
 
-                    RenderSystem.setShaderTexture(0, VERT_TEXTURE);
                     // Render the verticalbar
-                    gui.drawTexture(matrixStack, width - 91 + (currentIndex * (WIDTH - 2)),
+                    drawContext.drawTexture(VERT_TEXTURE, width - 91 + (currentIndex * (WIDTH - 2)),
                             scaledHeight - WIDTH - HEIGHT, 0, 0, WIDTH, HEIGHT);
 
                     for (int k = 3; k > 0; k--) {
                         int l = Config.INSTANCE.inverted ? Math.abs(k - 3) + 1 : k;
-                        fontRenderer.draw(matrixStack, String.valueOf(k), width - 98 + (currentIndex * (WIDTH - 2)), scaledHeight - 13 - (l * 22),
-                                0xFFFFFF);
+                        drawContext.drawText(fontRenderer, String.valueOf(k), width - 98 + (currentIndex * (WIDTH - 2)), scaledHeight - 13 - (l * 22),
+                                0xFFFFFF, false);
                     }
 
                     // Render items in the verticalbar
@@ -195,24 +189,23 @@ public class InventoryHotswap implements ModInitializer {
                         int k1 = scaledHeight - 16 - 3;
                         ItemStack stack = inventory.get(currentIndex + i);
 
-                        renderHotbarItem(matrixStack, j1, k1 - j, tickDelta, mc.player, stack, itemRenderer, fontRenderer);
+                        renderHotbarItem(drawContext, j1, k1 - j, tickDelta, mc.player, stack, itemRenderer, fontRenderer);
                     }
 
-                    RenderSystem.setShaderTexture(0, WIDGETS_TEXTURE_PATH);
                     // Render the selection square
-                    gui.drawTexture(matrixStack, width - 92 + (currentIndex * (WIDTH - 2)),
+                    drawContext.drawTexture(WIDGETS_TEXTURE_PATH, width - 92 + (currentIndex * (WIDTH - 2)),
                             scaledHeight - WIDTH - HEIGHT + scrollFunc(), 0, 22, 24, 24);
 
-                    renderHeldItemTooltip(matrixStack, scaledWidth, scaledHeight, fontRenderer);
+                    renderHeldItemTooltip(drawContext, scaledWidth, scaledHeight, fontRenderer);
 
                     // Reset the icon texture to stop hearts and hunger from being screwed up.
-                    RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
+                    RenderSystem.setShaderTexture(0, ICONS);
 
-                    renderMountHealth(matrixStack);
+                    renderMountHealth(drawContext);
                     if (mc.player.getJumpingMount() != null) {
-                        renderMountJumpBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+                        renderMountJumpBar(drawContext, mc.getWindow().getScaledWidth() / 2 - 91);
                     } else {
-                        renderExperienceBar(matrixStack, mc.getWindow().getScaledWidth() / 2 - 91);
+                        renderExperienceBar(drawContext, mc.getWindow().getScaledWidth() / 2 - 91);
                     }
                     RenderSystem.disableBlend();
                     matrixStack.pop();
@@ -236,23 +229,23 @@ public class InventoryHotswap implements ModInitializer {
         return selectedScrollPositions[Math.abs(Math.abs(accumulatedScrollDelta) - selectedScrollPositions.length)];
     }
 
-    public static void renderMountJumpBar(MatrixStack matrices, int x) {
+    public static void renderMountJumpBar(DrawContext drawContext, int x) {
         if (renderCustomMountInfo) {
             mc.getProfiler().push("jumpBar");
-            RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
+            RenderSystem.setShaderTexture(0, ICONS);
             float f = mc.player.getMountJumpStrength();
             int j = (int) (f * 183.0F);
             int k = /* mc.getWindow().getScaledHeight() - 32 + 3 */ mc.getWindow().getScaledHeight() - 29 - HEIGHT;
-            mc.inGameHud.drawTexture(matrices, x, k, 0, 84, 182, 5);
+            drawContext.drawTexture(ICONS, x, k, 0, 84, 182, 5);
             if (j > 0) {
-                mc.inGameHud.drawTexture(matrices, x, k, 0, 89, j, 5);
+                drawContext.drawTexture(ICONS, x, k, 0, 89, j, 5);
             }
 
             mc.getProfiler().pop();
         }
     }
 
-    private static void renderMountHealth(MatrixStack matrices) {
+    private static void renderMountHealth(DrawContext drawContext) {
         if (renderCustomMountInfo) {
             LivingEntity livingEntity = getRiddenEntity();
             if (livingEntity != null) {
@@ -272,13 +265,13 @@ public class InventoryHotswap implements ModInitializer {
                         for (int p = 0; p < o; ++p) {
                             int r = 0;
                             int s = l - p * 8 - 9;
-                            mc.inGameHud.drawTexture(matrices, s, m, 52 + r * 9, 9, 9, 9);
+                            drawContext.drawTexture(ICONS, s, m, 52 + r * 9, 9, 9, 9);
                             if (p * 2 + 1 + n < j) {
-                                mc.inGameHud.drawTexture(matrices, s, m, 88, 9, 9, 9);
+                                drawContext.drawTexture(ICONS, s, m, 88, 9, 9, 9);
                             }
 
                             if (p * 2 + 1 + n == j) {
-                                mc.inGameHud.drawTexture(matrices, s, m, 97, 9, 9, 9);
+                                drawContext.drawTexture(ICONS, s, m, 97, 9, 9, 9);
                             }
                         }
 
@@ -323,19 +316,19 @@ public class InventoryHotswap implements ModInitializer {
         }
     }
 
-    public static void renderExperienceBar(MatrixStack matrices, int x) {
+    public static void renderExperienceBar(DrawContext drawContext, int x) {
         if (renderCustomExpBar && isSurvivalorAdventure()) {
             mc.getProfiler().push("expBar");
-            RenderSystem.setShaderTexture(0, DrawableHelper.GUI_ICONS_TEXTURE);
+            RenderSystem.setShaderTexture(0, ICONS);
             int i = mc.player.getNextLevelExperience();
             int m;
             int n;
             if (i > 0) {
                 m = (int) (mc.player.experienceProgress * 183.0F);
                 n = mc.getWindow().getScaledHeight() - 29 - HEIGHT;
-                mc.inGameHud.drawTexture(matrices, x, n, 0, 64, 182, 5);
+                drawContext.drawTexture(ICONS, x, n, 0, 64, 182, 5);
                 if (m > 0) {
-                    mc.inGameHud.drawTexture(matrices, x, n, 0, 69, m, 5);
+                    drawContext.drawTexture(ICONS, x, n, 0, 69, m, 5);
                 }
             }
 
@@ -345,18 +338,18 @@ public class InventoryHotswap implements ModInitializer {
                 String string = "" + mc.player.experienceLevel;
                 m = (mc.getWindow().getScaledWidth() - mc.textRenderer.getWidth(string)) / 2;
                 n = mc.getWindow().getScaledHeight() - 31 - 4 - HEIGHT;
-                mc.textRenderer.draw(matrices, string, (float) (m + 1), (float) n, 0);
-                mc.textRenderer.draw(matrices, string, (float) (m - 1), (float) n, 0);
-                mc.textRenderer.draw(matrices, string, (float) m, (float) (n + 1), 0);
-                mc.textRenderer.draw(matrices, string, (float) m, (float) (n - 1), 0);
-                mc.textRenderer.draw(matrices, string, (float) m, (float) n, 8453920);
+                drawContext.drawText(mc.textRenderer, string, (m + 1), n, 0, false);
+                drawContext.drawText(mc.textRenderer, string, (m - 1), n, 0, false);
+                drawContext.drawText(mc.textRenderer, string, m, (n + 1), 0, false);
+                drawContext.drawText(mc.textRenderer, string, m, (n - 1), 0, false);
+                drawContext.drawText(mc.textRenderer, string, m, n, 8453920, false);
                 mc.getProfiler().pop();
             }
         }
 
     }
 
-    public static void renderHeldItemTooltip(MatrixStack matrices, int scaledWidth, int scaledHeight,
+    public static void renderHeldItemTooltip(DrawContext drawContext, int scaledWidth, int scaledHeight,
                                              TextRenderer textRenderer) {
         mc.getProfiler().push("selectedItemName");
         if (remainingHighlightTicks > 0 && !highlightingItemStack.isEmpty()) {
@@ -379,6 +372,7 @@ public class InventoryHotswap implements ModInitializer {
             }
 
             if (l > 0) {
+                MatrixStack matrices = drawContext.getMatrices();
                 matrices.push();
                 RenderSystem.enableBlend();
                 RenderSystem.defaultBlendFunc();
@@ -386,9 +380,9 @@ public class InventoryHotswap implements ModInitializer {
                 int var10002 = k - 2;
                 int var10003 = j + i + 2;
                 textRenderer.getClass();
-                DrawableHelper.fill(matrices, var10001, var10002, var10003, k + 9 + 2,
+                drawContext.fill(var10001, var10002, var10003, k + 9 + 2,
                         mc.options.getTextBackgroundColor(0));
-                textRenderer.drawWithShadow(matrices, (Text) mutableText, (float) j, (float) k, 16777215 + (l << 24));
+                drawContext.drawTextWithShadow(textRenderer, (Text) mutableText, j, k, 16777215 + (l << 24));
                 RenderSystem.disableBlend();
                 matrices.pop();
             }
@@ -397,10 +391,11 @@ public class InventoryHotswap implements ModInitializer {
         mc.getProfiler().pop();
     }
 
-    private static void renderHotbarItem(MatrixStack matrixStack, int x, int y, float tickDelta, PlayerEntity player, ItemStack stack,
+    private static void renderHotbarItem(DrawContext drawContext, int x, int y, float tickDelta, PlayerEntity player, ItemStack stack,
                                          ItemRenderer itemRenderer, TextRenderer textRenderer) {
         if (!stack.isEmpty()) {
             float f = (float) stack.getBobbingAnimationTime() - tickDelta;
+            MatrixStack matrixStack = drawContext.getMatrices();
             if (f > 0.0F) {
                 matrixStack.push();
                 float g = 1.0F + f / 5.0F;
@@ -409,12 +404,12 @@ public class InventoryHotswap implements ModInitializer {
                 matrixStack.translate((float) (-(x + 8)), (float) (-(y + 12)), 0.0F);
             }
 
-            itemRenderer.renderInGuiWithOverrides(stack, x, y);
+            drawContext.drawItem(stack, x, y);
             if (f > 0.0F) {
                 matrixStack.pop();
             }
 
-            itemRenderer.renderGuiItemOverlay(textRenderer, stack, x, y);
+            drawContext.drawItemInSlot(textRenderer, stack, x, y);
         }
     }
 
@@ -508,7 +503,7 @@ public class InventoryHotswap implements ModInitializer {
         renderCustomMountInfo = false;
         renderCustomExpBar = false;
         remainingHighlightTicks = 0;
-        mc.options.heldItemTooltips = true;
+        heldItemTooltips = true;
         highlightingItemStack = ItemStack.EMPTY;
         textOffset = 0;
         renderEntireBar = false;
